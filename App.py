@@ -17,51 +17,6 @@ from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(page_title="First Aid Reporter", layout="centered")
 
-# --- LOCATION DICTIONARY ---
-LOCATION_ZONES = {
-    "Fantasy Island (Rides & Attractions)": [
-        "Millennium Rollercoaster",
-        "The Odyssey",
-        "Volcano",
-        "Rhombus Rocket",
-        "Log Flume",
-        "Twister",
-        "Dodgems",
-        "Jubilee Odyssey Queue Line",
-        "Millennium Queue Line",
-        "Kids Ride Zone",
-        "Other Ride Area",
-    ],
-    "Fantasy Island (Markets & Midways)": [
-        "East Market Area",
-        "West Market Area",
-        "Main Midway (Near Derby Game)",
-        "Main Midway (Near Entrance)",
-        "Ingoldmells Market Outer",
-        "Island Food Court Area",
-    ],
-    "Skegness Pier": [
-        "Pier Deck (Outdoor)",
-        "Amusement Arcade Floor",
-        "Bowling Alley",
-        "Laser Quest Arena",
-        "Bar/Lounge Area",
-        "Pier Entrance / Promenade",
-    ],
-    "Nottingham Beach": [
-        "Sand / Beach Area",
-        "Pool / Water Play Area",
-        "F&B Stalls",
-        "Deckchair / Seating Area",
-    ],
-    "Other / General Compliance": [
-        "Retail Outlet",
-        "Public Toilets",
-        "Back of House / Staff Only Area",
-        "Car Park",
-    ],
-}
-
 # --- HEADER LOGO ---
 if os.path.exists("logo.png"):
   st.image("logo.png", width=220)
@@ -73,6 +28,7 @@ st.warning(
 )
 
 # --- INPUT FORM ---
+# Wraps inputs inside a form so pressing Enter in text fields won't submit the page
 with st.form("first_aid_form", clear_on_submit=False):
   # 1. CASUALTY DETAILS
   st.subheader("1. Casualty & Incident Details")
@@ -81,11 +37,11 @@ with st.form("first_aid_form", clear_on_submit=False):
     casualty_name = st.text_input("Injured Person's Name *")
     phone = st.text_input("Phone Number *")
     age = st.number_input(
-        "Age (If under 18)", min_value=0, max_value=100, value=18
+        "Age (If under 18)", min_value=0, max_value=100, value=None, step=1
     )
   with col2:
     address = st.text_input("Address & Postcode *")
-    inc_date = st.date_input("Date of Incident")
+    inc_date = st.date_input("Date of Incident", format="DD/MM/YYYY")
     inc_time = st.time_input("Time of Incident")
 
   icard_type = st.radio(
@@ -100,14 +56,9 @@ with st.form("first_aid_form", clear_on_submit=False):
 
   # 2. LOCATION
   st.subheader("2. Incident Location")
-  selected_zone = st.selectbox(
-      "Select Operational Zone / Venue", list(LOCATION_ZONES.keys())
-  )
-  loc_detail = st.selectbox(
-      "Specific Location", LOCATION_ZONES[selected_zone]
-  )
-  loc_extra = st.text_input(
-      "Additional Location Context (e.g., Near bay 3, bottom of stairs) *"
+  loc_detail = st.text_input(
+      "Incident Location (e.g., Millennium Rollercoaster queue, Ingoldmells"
+      " Market, Pier Arcade) *"
   )
 
   # 3. NARRATIVES
@@ -138,17 +89,8 @@ with st.form("first_aid_form", clear_on_submit=False):
   st.subheader("4. Disposition & Sign-Off")
   disposition = st.radio("Casualty Disposition *", [
       "Returned to Park / Resumed Activity",
-      "Left Site (Under own steam)",
-      "Left Site via Private Transport to Hospital",
-      "Left Site via Ambulance",
+      "Left Site",
   ])
-
-  ambulance_caller = ""
-  if disposition == "Left Site via Ambulance":
-    st.info("🚑 Ambulance Protocol Activated")
-    ambulance_caller = st.text_input(
-        "Who called for the ambulance? (Name & Role) *"
-    )
 
   fa_name = st.text_input("First Aider Name *")
   fa_dept = st.text_input("First Aider Department *")
@@ -198,7 +140,7 @@ if submit_button:
       "Phone Number": phone,
       "Address": address,
       "Ticket/Wristband Info": icard_num,
-      "Location Context": loc_extra,
+      "Incident Location": loc_detail,
       "Injured Person's Statement": statement,
       "Injuries Observed": injuries,
       "Treatment Given": treatment,
@@ -206,14 +148,11 @@ if submit_button:
       "First Aider Department": fa_dept,
   }
 
-  if disposition == "Left Site via Ambulance":
-    required_fields["Ambulance Caller Details"] = ambulance_caller
-
   missing_fields = []
   lazy_fields = []
 
   for label, val in required_fields.items():
-    stripped_val = str(val).strip()
+    stripped_val = str(val).strip() if val is not None else ""
     if not stripped_val:
       missing_fields.append(label)
     elif label in [
@@ -285,7 +224,7 @@ if submit_button:
               TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE")])
           )
           story.append(header_table)
-        except:
+        except Exception:
           story.append(
               Paragraph("<b>FIRST AID INCIDENT REPORT</b>", title_style)
           )
@@ -296,19 +235,27 @@ if submit_button:
 
       story.append(Spacer(1, 8))
 
+      # Format UK Date string for PDF
+      formatted_date = (
+          inc_date.strftime("%d/%m/%Y") if inc_date else "N/A"
+      )
+
       # Block 1
       admin_data = [
           [
               Paragraph("<b>Casualty Name:</b>", body_style),
               Paragraph(casualty_name, body_style),
               Paragraph("<b>Date / Time:</b>", body_style),
-              Paragraph(f"{inc_date} @ {inc_time}", body_style),
+              Paragraph(f"{formatted_date} @ {inc_time}", body_style),
           ],
           [
               Paragraph("<b>Address:</b>", body_style),
               Paragraph(address, body_style),
               Paragraph("<b>Age:</b>", body_style),
-              Paragraph(str(age) if age < 18 else "Adult", body_style),
+              Paragraph(
+                  str(age) if age is not None and age != "" else "N/A",
+                  body_style,
+              ),
           ],
           [
               Paragraph("<b>Phone:</b>", body_style),
@@ -331,12 +278,11 @@ if submit_button:
 
       # Block 2
       story.append(Paragraph("2. Incident Location", h2_style))
-      full_loc_string = f"{selected_zone} -> {loc_detail} ({loc_extra})"
       t2 = Table(
           [
               [
                   Paragraph("<b>Verified Location:</b>", body_style),
-                  Paragraph(full_loc_string, body_style),
+                  Paragraph(loc_detail, body_style),
               ]
           ],
           colWidths=[100, 430],
@@ -382,16 +328,10 @@ if submit_button:
 
       # Block 4
       story.append(Paragraph("4. Disposition & Sign-Offs", h2_style))
-      disp_display = disposition
-      if disposition == "Left Site via Ambulance":
-        disp_display = (
-            f"Left Site via Ambulance (Call logged by: {ambulance_caller})"
-        )
-
       sign_data = [
           [
               Paragraph("<b>Disposition:</b>", body_style),
-              Paragraph(disp_display, body_style),
+              Paragraph(disposition, body_style),
           ],
           [
               Paragraph("<b>First Aider:</b>", body_style),
@@ -430,7 +370,9 @@ if submit_button:
     st.download_button(
         label="📲 Download Validated Report PDF",
         data=pdf_bytes,
-        file_name=f"First_Aid_{casualty_name.replace(' ', '_')}_{inc_date}.pdf",
+        file_name=(
+            f"First_Aid_{casualty_name.replace(' ', '_')}_{inc_date.strftime('%d-%m-%Y')}.pdf"
+        ),
         mime="application/pdf",
         use_container_width=True,
     )
