@@ -36,15 +36,36 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- HEADER LOGO ---
+# --- APP HEADER & LOGO ---
 if os.path.exists("logo.png"):
-  st.image("logo.png", width=220)
+  st.image("logo.png", width=240)
 
 st.title("📋 First Aid Incident Report")
 st.warning(
     "⚠️ All text boxes require descriptive sentences. Vague one or two-word"
     " entries will block submission."
 )
+
+
+# --- DIALOG POP-UP FOR DOWNLOAD & REMINDER ---
+@st.dialog("✅ Report Generated Successfully")
+def show_download_dialog(pdf_bytes, file_name):
+  st.success("The First Aid Report has been compiled and validated.")
+
+  st.warning(
+      "📧 **Action Required:**\n\n"
+      "Please ensure a copy of this generated report is emailed to:\n\n"
+      "👉 **Safety@fantasyislandresort.co.uk**"
+  )
+
+  st.download_button(
+      label="📲 Download Validated Report PDF",
+      data=pdf_bytes,
+      file_name=file_name,
+      mime="application/pdf",
+      use_container_width=True,
+  )
+
 
 # --- INPUT FORM ---
 with st.form("first_aid_form", clear_on_submit=False):
@@ -213,7 +234,7 @@ if submit_button:
           "BoldBody", parent=body_style, fontName="Helvetica-Bold"
       )
 
-      # Logo Integration
+      # Logo Integration in PDF Header
       if os.path.exists("logo.png"):
         try:
           logo_img = RLImage("logo.png", width=120, height=50)
@@ -368,14 +389,7 @@ if submit_button:
       return buffer.getvalue()
 
     pdf_bytes = generate_pdf()
-    st.success("✅ Form successfully validated and PDF generated!")
+    file_name = f"First_Aid_{casualty_name.replace(' ', '_')}_{inc_date.strftime('%d-%m-%Y')}.pdf"
 
-    st.download_button(
-        label="📲 Download Validated Report PDF",
-        data=pdf_bytes,
-        file_name=(
-            f"First_Aid_{casualty_name.replace(' ', '_')}_{inc_date.strftime('%d-%m-%Y')}.pdf"
-        ),
-        mime="application/pdf",
-        use_container_width=True,
-    )
+    # Trigger Pop-Up Modal
+    show_download_dialog(pdf_bytes, file_name)
