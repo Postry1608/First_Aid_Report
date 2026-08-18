@@ -1,251 +1,436 @@
-import base64
-import datetime
-from io import BytesIO
+import io
+import os
 from PIL import Image
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.platypus import Image as RLImage, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import (
+    Image as RLImage,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 
-# Force wide/mobile-friendly viewport
-st.set_page_config(
-    page_title="First Aid Report", layout="centered", initial_sidebar_state="collapsed"
+st.set_page_config(page_title="First Aid Reporter", layout="centered")
+
+# --- LOCATION DICTIONARY ---
+LOCATION_ZONES = {
+    "Fantasy Island (Rides & Attractions)": [
+        "Millennium Rollercoaster",
+        "The Odyssey",
+        "Volcano",
+        "Rhombus Rocket",
+        "Log Flume",
+        "Twister",
+        "Dodgems",
+        "Jubilee Odyssey Queue Line",
+        "Millennium Queue Line",
+        "Kids Ride Zone",
+        "Other Ride Area",
+    ],
+    "Fantasy Island (Markets & Midways)": [
+        "East Market Area",
+        "West Market Area",
+        "Main Midway (Near Derby Game)",
+        "Main Midway (Near Entrance)",
+        "Ingoldmells Market Outer",
+        "Island Food Court Area",
+    ],
+    "Skegness Pier": [
+        "Pier Deck (Outdoor)",
+        "Amusement Arcade Floor",
+        "Bowling Alley",
+        "Laser Quest Arena",
+        "Bar/Lounge Area",
+        "Pier Entrance / Promenade",
+    ],
+    "Nottingham Beach": [
+        "Sand / Beach Area",
+        "Pool / Water Play Area",
+        "F&B Stalls",
+        "Deckchair / Seating Area",
+    ],
+    "Other / General Compliance": [
+        "Retail Outlet",
+        "Public Toilets",
+        "Back of House / Staff Only Area",
+        "Car Park",
+    ],
+}
+
+# --- HEADER LOGO ---
+if os.path.exists("logo.png"):
+  st.image("logo.png", width=220)
+
+st.title("📋 First Aid Incident Report")
+st.warning(
+    "⚠️ All text boxes require descriptive sentences. Vague one or two-word"
+    " entries will block submission."
 )
 
-# Custom CSS for bigger touch targets on mobile screens
-st.markdown(
-    """
-    <style>
-    .stButton button, .stLinkButton a {
-        width: 100%;
-        height: 3rem;
-        font-size: 1.1rem;
-        font-weight: bold;
-    }
-    textarea, input {
-        font-size: 1rem !important;
-    }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
-
-st.title("📋 FIRST AID REPORT")
-
-# --- SECTION 1: INJURED PERSON DETAILS ---
-st.subheader("1. Injured Person Details")
-injured_name = st.text_input("Injured Person's Name")
-age = st.text_input("Age (if under 18 yrs)")
-address = st.text_area("Address", height=100)
-postcode = st.text_input("Post Code")
-phone = st.text_input("Phone Number")
-
-st.markdown("**Wristband / iCard Scanning**")
-card_number = st.text_input(
-    "Wristband / iCard Number",
-    key="card_num",
-    placeholder="Tap button below to check/scan card...",
-)
-st.link_button(
-    "📲 Scan Wristband / iCard", "https://semnox.404labs.co.uk/balance-checker"
-)
-
-st.divider()
-
-# --- SECTION 2: INCIDENT DETAILS ---
-st.subheader("2. Incident Details")
-incident_date = st.date_input("Date of Incident", datetime.date.today())
-incident_time = st.time_input(
-    "Time of Incident", datetime.datetime.now().time()
-)
-location = st.text_input("Location of Incident")
-statement = st.text_area("Statement of Account (What happened)", height=120)
-injuries = st.text_area("Injuries Caused", height=100)
-treatment = st.text_area("Treatment or Advice Given", height=100)
-
-st.divider()
-
-# --- SECTION 3: FIRST AIDER DETAILS ---
-st.subheader("3. First Aider & Additional Info")
-first_aider_name = st.text_input("First Aider Name")
-department = st.text_input("Department")
-additional_info = st.text_area("Additional Information", height=100)
-
-st.divider()
-
-# --- SECTION 4: SIGNATURES ---
-st.subheader("4. Signatures")
-
-st.write("✍️ **Injured Person Signature**")
-canvas_injured = st_canvas(
-    stroke_width=2,
-    stroke_color="#000000",
-    background_color="#F0F2F6",
-    height=120,
-    width=320,
-    drawing_mode="freedraw",
-    key="sig_injured",
-)
-
-st.write("✍️ **Sign here if Casualty REFUSED First Aid**")
-canvas_refused = st_canvas(
-    stroke_width=2,
-    stroke_color="#000000",
-    background_color="#F0F2F6",
-    height=120,
-    width=320,
-    drawing_mode="freedraw",
-    key="sig_refused",
-)
-
-st.write("✍️ **Sign here if Casualty WAS ADVISED to go to Hospital**")
-canvas_hospital = st_canvas(
-    stroke_width=2,
-    stroke_color="#000000",
-    background_color="#F0F2F6",
-    height=120,
-    width=320,
-    drawing_mode="freedraw",
-    key="sig_hospital",
-)
-
-
-# --- PDF GENERATION FUNCTION ---
-def generate_pdf():
-  buffer = BytesIO()
-  doc = SimpleDocTemplate(
-      buffer,
-      pagesize=A4,
-      rightMargin=20,
-      leftMargin=20,
-      topMargin=20,
-      bottomMargin=20,
-  )
-  elements = []
-
-  styles = getSampleStyleSheet()
-  title_style = ParagraphStyle(
-      "Title", parent=styles["Heading1"], alignment=1, fontSize=16, leading=20
-  )
-  bold_style = ParagraphStyle(
-      "Bold", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=9
-  )
-  normal_style = ParagraphStyle("Normal", parent=styles["Normal"], fontSize=9)
-
-  elements.append(Paragraph("<b>FIRST AID REPORT</b>", title_style))
-  elements.append(Spacer(1, 10))
-
-  def make_cell(label, value):
-    return Paragraph(f"<b>{label}:</b> {value or ''}", normal_style)
-
-  # Main Info Table
-  data_table1 = [
-      [
-          make_cell("INJURED PERSONS NAME", injured_name),
-          make_cell("AGE (if under 18)", age),
-      ],
-      [
-          make_cell("ADDRESS", address),
-          make_cell("POST CODE", postcode),
-      ],
-      [
-          make_cell("PHONE NUMBER", phone),
-          make_cell("WRISTBAND/iCARD NO", card_number),
-      ],
-      [
-          make_cell("DATE OF INCIDENT", str(incident_date)),
-          make_cell("TIME OF INCIDENT", str(incident_time)),
-      ],
-      [make_cell("LOCATION OF INCIDENT", location), ""],
-  ]
-  t1 = Table(data_table1, colWidths=[350, 200])
-  t1.setStyle(
-      TableStyle([
-          ("SPAN", (0, 4), (1, 4)),
-          ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-          ("VALIGN", (0, 0), (-1, -1), "TOP"),
-      ])
-  )
-  elements.append(t1)
-  elements.append(Spacer(1, 8))
-
-  # Section Block Helper
-  def add_block(header, content):
-    data = [[
-        Paragraph(f"<b>{header}</b>", bold_style)
-    ], [
-        Paragraph(content or "", normal_style)
-    ]]
-    t = Table(data, colWidths=[550])
-    t.setStyle(
-        TableStyle([
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-            ("BACKGROUND", (0, 0), (0, 0), colors.lightgrey),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ])
+# --- INPUT FORM ---
+with st.form("first_aid_form", clear_on_submit=False):
+  # 1. CASUALTY DETAILS
+  st.subheader("1. Casualty & Incident Details")
+  col1, col2 = st.columns(2)
+  with col1:
+    casualty_name = st.text_input("Injured Person's Name *")
+    phone = st.text_input("Phone Number *")
+    age = st.number_input(
+        "Age (If under 18)", min_value=0, max_value=100, value=18
     )
-  elements.append(t)
-  elements.append(Spacer(1, 8))
+  with col2:
+    address = st.text_input("Address & Postcode *")
+    inc_date = st.date_input("Date of Incident")
+    inc_time = st.time_input("Time of Incident")
 
-  add_block("INJURED PERSONS STATEMENT OF ACCOUNT", statement)
-  add_block("ANY INJURIES CAUSED", injuries)
-  add_block("TREATMENT OR ADVICE GIVEN", treatment)
-
-  # Helper to process signatures
-  def get_sig_image(canvas):
-    if canvas.image_data is not None and canvas.image_data.any():
-      img = Image.fromarray(canvas.image_data.astype("uint8"), "RGBA")
-      img_byte_arr = BytesIO()
-      img.save(img_byte_arr, format="PNG")
-      img_byte_arr.seek(0)
-      return RLImage(img_byte_arr, width=140, height=45)
-    return Paragraph("<i>No Signature Provided</i>", normal_style)
-
-  # Signatures and First Aider Table
-  data_sig = [
-      [
-          Paragraph("<b>INJURED PERSON SIGNATURE:</b>", bold_style),
-          get_sig_image(canvas_injured),
-      ],
-      [
-          make_cell("FIRST AIDER NAME", first_aider_name),
-          make_cell("DEPARTMENT", department),
-      ],
-      [
-          Paragraph("<b>REFUSED FIRST AID SIGNATURE:</b>", bold_style),
-          get_sig_image(canvas_refused),
-      ],
-      [
-          Paragraph("<b>ADVISED TO GO TO HOSPITAL SIGNATURE:</b>", bold_style),
-          get_sig_image(canvas_hospital),
-      ],
-  ]
-  t_sig = Table(data_sig, colWidths=[275, 275])
-  t_sig.setStyle(
-      TableStyle([
-          ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-          ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-      ])
+  icard_type = st.radio(
+      "Ticket Type",
+      ["No iCard/Wristband", "Wristband", "iCard"],
+      horizontal=True,
   )
-  elements.append(t_sig)
-  elements.append(Spacer(1, 8))
-
-  add_block("ADDITIONAL INFORMATION RELEVANT TO THE REPORT", additional_info)
-
-  doc.build(elements)
-  buffer.seek(0)
-  return buffer
-
-
-# --- EXPORT / DOWNLOAD ---
-st.divider()
-if st.button("📄 Generate First Aid PDF Report"):
-  pdf_data = generate_pdf()
-  st.download_button(
-      label="📥 Download PDF to Device",
-      data=pdf_data,
-      file_name=f"First_Aid_Report_{injured_name or 'Incident'}.pdf",
-      mime="application/pdf",
+  icard_num = st.text_input("Wristband / iCard Number (Type N/A if none) *")
+  st.link_button(
+      "📲 Scan Wristband / iCard", "https://semnox.404labs.co.uk/balance-checker"
   )
+
+  # 2. LOCATION
+  st.subheader("2. Incident Location")
+  selected_zone = st.selectbox(
+      "Select Operational Zone / Venue", list(LOCATION_ZONES.keys())
+  )
+  loc_detail = st.selectbox(
+      "Specific Location", LOCATION_ZONES[selected_zone]
+  )
+  loc_extra = st.text_input(
+      "Additional Location Context (e.g., Near bay 3, bottom of stairs) *"
+  )
+
+  # 3. NARRATIVES
+  st.subheader("3. Incident & Clinical Details")
+  statement = st.text_area(
+      "Injured Person's Statement / Account *",
+      placeholder=(
+          "Describe the exact mechanism of the incident. What caused the fall?"
+          " Use their words where possible."
+      ),
+  )
+  injuries = st.text_area(
+      "Injuries Observed & Reported *",
+      placeholder=(
+          "Detail visible signs (swelling, cuts) and symptoms reported (pain"
+          " level, numbness)."
+      ),
+  )
+  treatment = st.text_area(
+      "Treatment or Advice Given *",
+      placeholder=(
+          "Detail all actions taken, equipment used (e.g., sling), and specific"
+          " advice given."
+      ),
+  )
+
+  # 4. DISPOSITION & FIRST AIDER
+  st.subheader("4. Disposition & Sign-Off")
+  disposition = st.radio("Casualty Disposition *", [
+      "Returned to Park / Resumed Activity",
+      "Left Site (Under own steam)",
+      "Left Site via Private Transport to Hospital",
+      "Left Site via Ambulance",
+  ])
+
+  ambulance_caller = ""
+  if disposition == "Left Site via Ambulance":
+    st.info("🚑 Ambulance Protocol Activated")
+    ambulance_caller = st.text_input(
+        "Who called for the ambulance? (Name & Role) *"
+    )
+
+  fa_name = st.text_input("First Aider Name *")
+  fa_dept = st.text_input("First Aider Department *")
+
+  st.markdown("---")
+  st.write("✍️ **Injured Person Signature**")
+  canvas_injured = st_canvas(
+      stroke_width=2,
+      stroke_color="#000",
+      background_color="#F0F2F6",
+      height=100,
+      width=320,
+      drawing_mode="freedraw",
+      key="sig_inj",
+  )
+
+  st.write("✍️ **Casualty REFUSED First Aid Signature**")
+  canvas_refused = st_canvas(
+      stroke_width=2,
+      stroke_color="#000",
+      background_color="#F0F2F6",
+      height=100,
+      width=320,
+      drawing_mode="freedraw",
+      key="sig_ref",
+  )
+
+  st.write("✍️ **Casualty ADVISED to go to Hospital Signature**")
+  canvas_hospital = st_canvas(
+      stroke_width=2,
+      stroke_color="#000",
+      background_color="#F0F2F6",
+      height=100,
+      width=320,
+      drawing_mode="freedraw",
+      key="sig_hosp",
+  )
+
+  submit_button = st.form_submit_button(
+      "Verify and Generate Document", type="primary"
+  )
+
+# --- FORM VALIDATION & PDF GENERATION ---
+if submit_button:
+  required_fields = {
+      "Casualty Name": casualty_name,
+      "Phone Number": phone,
+      "Address": address,
+      "Ticket/Wristband Info": icard_num,
+      "Location Context": loc_extra,
+      "Injured Person's Statement": statement,
+      "Injuries Observed": injuries,
+      "Treatment Given": treatment,
+      "First Aider Name": fa_name,
+      "First Aider Department": fa_dept,
+  }
+
+  if disposition == "Left Site via Ambulance":
+    required_fields["Ambulance Caller Details"] = ambulance_caller
+
+  missing_fields = []
+  lazy_fields = []
+
+  for label, val in required_fields.items():
+    stripped_val = str(val).strip()
+    if not stripped_val:
+      missing_fields.append(label)
+    elif label in [
+        "Injured Person's Statement",
+        "Injuries Observed",
+        "Treatment Given",
+    ] and len(stripped_val.split()) < 3:
+      lazy_fields.append(label)
+
+  if missing_fields:
+    st.error(
+        "❌ Cannot generate PDF. The following mandatory fields are empty:"
+        f" {', '.join(missing_fields)}"
+    )
+  elif lazy_fields:
+    st.error(
+        "❌ Quality Check Failed: The text boxes for"
+        f" **{', '.join(lazy_fields)}** require a full descriptive sentence,"
+        " not just one or two words."
+    )
+  else:
+
+    def generate_pdf():
+      buffer = io.BytesIO()
+      doc = SimpleDocTemplate(
+          buffer,
+          pagesize=A4,
+          rightMargin=30,
+          leftMargin=30,
+          topMargin=30,
+          bottomMargin=30,
+      )
+      story = []
+
+      styles = getSampleStyleSheet()
+      title_style = ParagraphStyle(
+          "TitleStyle",
+          parent=styles["Heading1"],
+          fontSize=16,
+          spaceAfter=12,
+          textColor=colors.HexColor("#1A365D"),
+      )
+      h2_style = ParagraphStyle(
+          "H2Style",
+          parent=styles["Heading2"],
+          fontSize=11,
+          spaceBefore=8,
+          spaceAfter=4,
+          textColor=colors.HexColor("#2B6CB0"),
+      )
+      body_style = ParagraphStyle(
+          "BodyStyle", parent=styles["BodyText"], fontSize=9, leading=13
+      )
+      bold_body = ParagraphStyle(
+          "BoldBody", parent=body_style, fontName="Helvetica-Bold"
+      )
+
+      # Logo Integration
+      if os.path.exists("logo.png"):
+        try:
+          logo_img = RLImage("logo.png", width=120, height=50)
+          logo_img.hAlign = "RIGHT"
+          header_data = [[
+              Paragraph("<b>FIRST AID INCIDENT REPORT</b>", title_style),
+              logo_img,
+          ]]
+          header_table = Table(header_data, colWidths=[370, 160])
+          header_table.setStyle(
+              TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE")])
+          )
+          story.append(header_table)
+        except:
+          story.append(
+              Paragraph("<b>FIRST AID INCIDENT REPORT</b>", title_style)
+          )
+      else:
+        story.append(
+            Paragraph("<b>FIRST AID INCIDENT REPORT</b>", title_style)
+        )
+
+      story.append(Spacer(1, 8))
+
+      # Block 1
+      admin_data = [
+          [
+              Paragraph("<b>Casualty Name:</b>", body_style),
+              Paragraph(casualty_name, body_style),
+              Paragraph("<b>Date / Time:</b>", body_style),
+              Paragraph(f"{inc_date} @ {inc_time}", body_style),
+          ],
+          [
+              Paragraph("<b>Address:</b>", body_style),
+              Paragraph(address, body_style),
+              Paragraph("<b>Age:</b>", body_style),
+              Paragraph(str(age) if age < 18 else "Adult", body_style),
+          ],
+          [
+              Paragraph("<b>Phone:</b>", body_style),
+              Paragraph(phone, body_style),
+              Paragraph("<b>Ticket Info:</b>", body_style),
+              Paragraph(f"{icard_type}: {icard_num}", body_style),
+          ],
+      ]
+      t1 = Table(admin_data, colWidths=[90, 175, 90, 175])
+      t1.setStyle(
+          TableStyle([
+              ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+              ("BACKGROUND", (0, 0), (0, -1), colors.whitesmoke),
+              ("BACKGROUND", (2, 0), (2, -1), colors.whitesmoke),
+              ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+          ])
+      )
+      story.append(Paragraph("1. Administrative & Asset Details", h2_style))
+      story.append(t1)
+
+      # Block 2
+      story.append(Paragraph("2. Incident Location", h2_style))
+      full_loc_string = f"{selected_zone} -> {loc_detail} ({loc_extra})"
+      t2 = Table(
+          [
+              [
+                  Paragraph("<b>Verified Location:</b>", body_style),
+                  Paragraph(full_loc_string, body_style),
+              ]
+          ],
+          colWidths=[100, 430],
+      )
+      t2.setStyle(
+          TableStyle([
+              ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+              ("BACKGROUND", (0, 0), (0, -1), colors.whitesmoke),
+          ])
+      )
+      story.append(t2)
+
+      # Block 3
+      story.append(Paragraph("3. Incident & Clinical Details", h2_style))
+      narrative_data = [
+          [Paragraph("<b>Injured Person's Statement:</b>", bold_body)],
+          [Paragraph(statement, body_style)],
+          [Paragraph("<b>Injuries Observed & Reported:</b>", bold_body)],
+          [Paragraph(injuries, body_style)],
+          [Paragraph("<b>Treatment or Advice Given:</b>", bold_body)],
+          [Paragraph(treatment, body_style)],
+      ]
+      t3 = Table(narrative_data, colWidths=[530])
+      t3.setStyle(
+          TableStyle([
+              ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+              ("BACKGROUND", (0, 0), (0, 0), colors.whitesmoke),
+              ("BACKGROUND", (0, 2), (0, 2), colors.whitesmoke),
+              ("BACKGROUND", (0, 4), (0, 4), colors.whitesmoke),
+          ])
+      )
+      story.append(t3)
+
+      # Helper for signatures in PDF
+      def get_sig_img(canvas):
+        if canvas.image_data is not None and canvas.image_data.any():
+          img = Image.fromarray(canvas.image_data.astype("uint8"), "RGBA")
+          img_b = io.BytesIO()
+          img.save(img_b, format="PNG")
+          img_b.seek(0)
+          return RLImage(img_b, width=120, height=35)
+        return Paragraph("<i>None</i>", body_style)
+
+      # Block 4
+      story.append(Paragraph("4. Disposition & Sign-Offs", h2_style))
+      disp_display = disposition
+      if disposition == "Left Site via Ambulance":
+        disp_display = (
+            f"Left Site via Ambulance (Call logged by: {ambulance_caller})"
+        )
+
+      sign_data = [
+          [
+              Paragraph("<b>Disposition:</b>", body_style),
+              Paragraph(disp_display, body_style),
+          ],
+          [
+              Paragraph("<b>First Aider:</b>", body_style),
+              Paragraph(f"{fa_name} ({fa_dept})", body_style),
+          ],
+          [
+              Paragraph("<b>Casualty Signature:</b>", body_style),
+              get_sig_img(canvas_injured),
+          ],
+          [
+              Paragraph("<b>Treatment Refused Sig:</b>", body_style),
+              get_sig_img(canvas_refused),
+          ],
+          [
+              Paragraph("<b>Hospital Advised Sig:</b>", body_style),
+              get_sig_img(canvas_hospital),
+          ],
+      ]
+      t4 = Table(sign_data, colWidths=[130, 400])
+      t4.setStyle(
+          TableStyle([
+              ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+              ("BACKGROUND", (0, 0), (0, -1), colors.whitesmoke),
+              ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+          ])
+      )
+      story.append(t4)
+
+      doc.build(story)
+      buffer.seek(0)
+      return buffer.getvalue()
+
+    pdf_bytes = generate_pdf()
+    st.success("✅ Form successfully validated and PDF generated!")
+
+    st.download_button(
+        label="📲 Download Validated Report PDF",
+        data=pdf_bytes,
+        file_name=f"First_Aid_{casualty_name.replace(' ', '_')}_{inc_date}.pdf",
+        mime="application/pdf",
+        use_container_width=True,
+    )
