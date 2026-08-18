@@ -1,0 +1,4 @@
+streamlit
+reportlab
+streamlit-drawable-canvas
+pillow
