@@ -17,6 +17,19 @@ from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(page_title="First Aid Reporter", layout="centered")
 
+# --- HIDE "PRESS ENTER TO SUBMIT" HELPER TEXT VIA CSS ---
+st.markdown(
+    """
+    <style>
+    /* Hides the 'Press Enter to submit' / 'Press ↵ to submit' prompt under text inputs */
+    div[data-testid="InputInstructions"] {
+        display: none !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # --- HEADER LOGO ---
 if os.path.exists("logo.png"):
   st.image("logo.png", width=220)
@@ -28,7 +41,6 @@ st.warning(
 )
 
 # --- INPUT FORM ---
-# Wraps inputs inside a form so pressing Enter in text fields won't submit the page
 with st.form("first_aid_form", clear_on_submit=False):
   # 1. CASUALTY DETAILS
   st.subheader("1. Casualty & Incident Details")
