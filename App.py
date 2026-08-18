@@ -234,16 +234,16 @@ if submit_button:
           "BoldBody", parent=body_style, fontName="Helvetica-Bold"
       )
 
-      # --- LOGO INTEGRATION AT TOP OF PDF REPORT ---
+      # Logo Integration in PDF Header
       if os.path.exists("logo.png"):
         try:
-          logo_img = RLImage("logo.png", width=140, height=50)
+          logo_img = RLImage("logo.png", width=120, height=50)
           logo_img.hAlign = "RIGHT"
           header_data = [[
               Paragraph("<b>FIRST AID INCIDENT REPORT</b>", title_style),
               logo_img,
           ]]
-          header_table = Table(header_data, colWidths=[360, 170])
+          header_table = Table(header_data, colWidths=[370, 160])
           header_table.setStyle(
               TableStyle([("VALIGN", (0, 0), (-1, -1), "MIDDLE")])
           )
@@ -257,7 +257,7 @@ if submit_button:
             Paragraph("<b>FIRST AID INCIDENT REPORT</b>", title_style)
         )
 
-      story.append(Spacer(1, 10))
+      story.append(Spacer(1, 8))
 
       # Format UK Date string for PDF
       formatted_date = (
