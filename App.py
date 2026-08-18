@@ -1,82 +1,112 @@
 import base64
 import datetime
 from io import BytesIO
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import Image as RLImage, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from PIL import Image
 from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import Image as RLImage, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 
-st.set_page_config(page_title="First Aid Report", layout="centered")
+# Force wide/mobile-friendly viewport
+st.set_page_config(
+    page_title="First Aid Report", layout="centered", initial_sidebar_state="collapsed"
+)
 
-st.title("FIRST AID REPORT")
+# Custom CSS for bigger touch targets on mobile screens
+st.markdown(
+    """
+    <style>
+    .stButton button, .stLinkButton a {
+        width: 100%;
+        height: 3rem;
+        font-size: 1.1rem;
+        font-weight: bold;
+    }
+    textarea, input {
+        font-size: 1rem !important;
+    }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
+
+st.title("📋 FIRST AID REPORT")
 
 # --- SECTION 1: INJURED PERSON DETAILS ---
-st.subheader("1. INJURED PERSON DETAILS")
+st.subheader("1. Injured Person Details")
 injured_name = st.text_input("Injured Person's Name")
-age = st.text_input("Age (if under 18yrs)")
-address = st.text_area("Address")
+age = st.text_input("Age (if under 18 yrs)")
+address = st.text_area("Address", height=100)
 postcode = st.text_input("Post Code")
 phone = st.text_input("Phone Number")
 
-col_card, col_btn = st.columns([2, 1])
-with col_card:
-  card_number = st.text_input("Wristband / iCard Number", key="card_num")
-with col_btn:
-  st.write(" ")
-  st.write(" ")
-  st.link_button(
-      "Scan Wristband", "https://semnox.404labs.co.uk/balance-checker"
-  )
+st.markdown("**Wristband / iCard Scanning**")
+card_number = st.text_input(
+    "Wristband / iCard Number",
+    key="card_num",
+    placeholder="Tap button below to check/scan card...",
+)
+st.link_button(
+    "📲 Scan Wristband / iCard", "https://semnox.404labs.co.uk/balance-checker"
+)
+
+st.divider()
 
 # --- SECTION 2: INCIDENT DETAILS ---
-st.subheader("2. INCIDENT DETAILS")
+st.subheader("2. Incident Details")
 incident_date = st.date_input("Date of Incident", datetime.date.today())
-incident_time = st.time_input("Time of Incident", datetime.datetime.now().time())
+incident_time = st.time_input(
+    "Time of Incident", datetime.datetime.now().time()
+)
 location = st.text_input("Location of Incident")
-statement = st.text_area("Injured Person's Statement of Account")
-injuries = st.text_area("Any Injuries Caused")
-treatment = st.text_area("Treatment or Advice Given")
+statement = st.text_area("Statement of Account (What happened)", height=120)
+injuries = st.text_area("Injuries Caused", height=100)
+treatment = st.text_area("Treatment or Advice Given", height=100)
+
+st.divider()
 
 # --- SECTION 3: FIRST AIDER DETAILS ---
-st.subheader("3. FIRST AIDER DETAILS")
+st.subheader("3. First Aider & Additional Info")
 first_aider_name = st.text_input("First Aider Name")
 department = st.text_input("Department")
-additional_info = st.text_area("Additional Information relevant to report")
+additional_info = st.text_area("Additional Information", height=100)
+
+st.divider()
 
 # --- SECTION 4: SIGNATURES ---
-st.subheader("4. SIGNATURES")
+st.subheader("4. Signatures")
 
-st.write("**Injured Person Signature**")
+st.write("✍️ **Injured Person Signature**")
 canvas_injured = st_canvas(
     stroke_width=2,
     stroke_color="#000000",
-    background_color="#FFF",
-    height=100,
-    width=350,
+    background_color="#F0F2F6",
+    height=120,
+    width=320,
     drawing_mode="freedraw",
     key="sig_injured",
 )
 
-st.write("**Sign here if Casualty REFUSED First Aid**")
+st.write("✍️ **Sign here if Casualty REFUSED First Aid**")
 canvas_refused = st_canvas(
     stroke_width=2,
     stroke_color="#000000",
-    background_color="#FFF",
-    height=100,
-    width=350,
+    background_color="#F0F2F6",
+    height=120,
+    width=320,
     drawing_mode="freedraw",
     key="sig_refused",
 )
 
-st.write("**Sign here if Casualty WAS ADVISED to go to Hospital**")
+st.write("✍️ **Sign here if Casualty WAS ADVISED to go to Hospital**")
 canvas_hospital = st_canvas(
     stroke_width=2,
     stroke_color="#000000",
-    background_color="#FFF",
-    height=100,
-    width=350,
+    background_color="#F0F2F6",
+    height=120,
+    width=320,
     drawing_mode="freedraw",
     key="sig_hospital",
 )
@@ -156,8 +186,8 @@ def generate_pdf():
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ])
     )
-    elements.append(t)
-    elements.append(Spacer(1, 8))
+  elements.append(t)
+  elements.append(Spacer(1, 8))
 
   add_block("INJURED PERSONS STATEMENT OF ACCOUNT", statement)
   add_block("ANY INJURIES CAUSED", injuries)
@@ -166,13 +196,11 @@ def generate_pdf():
   # Helper to process signatures
   def get_sig_image(canvas):
     if canvas.image_data is not None and canvas.image_data.any():
-      from PIL import Image
-
       img = Image.fromarray(canvas.image_data.astype("uint8"), "RGBA")
       img_byte_arr = BytesIO()
       img.save(img_byte_arr, format="PNG")
       img_byte_arr.seek(0)
-      return RLImage(img_byte_arr, width=150, height=45)
+      return RLImage(img_byte_arr, width=140, height=45)
     return Paragraph("<i>No Signature Provided</i>", normal_style)
 
   # Signatures and First Aider Table
@@ -211,12 +239,12 @@ def generate_pdf():
   return buffer
 
 
-# --- GENERATE & DOWNLOAD BUTTON ---
+# --- EXPORT / DOWNLOAD ---
 st.divider()
-if st.button("Generate First Aid PDF"):
+if st.button("📄 Generate First Aid PDF Report"):
   pdf_data = generate_pdf()
   st.download_button(
-      label="📥 Download Completed PDF Report",
+      label="📥 Download PDF to Device",
       data=pdf_data,
       file_name=f"First_Aid_Report_{injured_name or 'Incident'}.pdf",
       mime="application/pdf",
