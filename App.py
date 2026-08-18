@@ -17,12 +17,18 @@ from streamlit_drawable_canvas import st_canvas
 
 st.set_page_config(page_title="First Aid Reporter", layout="centered")
 
-# --- HIDE "PRESS ENTER TO SUBMIT" HELPER TEXT VIA CSS ---
+# --- HIDE "PRESS ENTER TO SUBMIT" & STEPPER (+/-) BUTTONS VIA CSS ---
 st.markdown(
     """
     <style>
-    /* Hides the 'Press Enter to submit' / 'Press ↵ to submit' prompt under text inputs */
+    /* Hides the 'Press Enter to submit' prompt under text inputs */
     div[data-testid="InputInstructions"] {
+        display: none !important;
+    }
+    
+    /* Hides the + and - stepper buttons on number inputs */
+    button[data-testid="stNumberInputStepDown"],
+    button[data-testid="stNumberInputStepUp"] {
         display: none !important;
     }
     </style>
@@ -62,8 +68,11 @@ with st.form("first_aid_form", clear_on_submit=False):
       horizontal=True,
   )
   icard_num = st.text_input("Wristband / iCard Number (Type N/A if none) *")
+
+  # Standard link button (target="_blank" opens in a new browser tab automatically)
   st.link_button(
-      "📲 Scan Wristband / iCard", "https://semnox.404labs.co.uk/balance-checker"
+      "📲 Scan Wristband / iCard (Opens in New Tab)",
+      "https://semnox.404labs.co.uk/balance-checker",
   )
 
   # 2. LOCATION
