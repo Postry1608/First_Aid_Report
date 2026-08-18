@@ -69,7 +69,6 @@ with st.form("first_aid_form", clear_on_submit=False):
   )
   icard_num = st.text_input("Wristband / iCard Number (Type N/A if none) *")
 
-  # Standard link button (target="_blank" opens in a new browser tab automatically)
   st.link_button(
       "📲 Scan Wristband / iCard (Opens in New Tab)",
       "https://semnox.404labs.co.uk/balance-checker",
@@ -113,41 +112,24 @@ with st.form("first_aid_form", clear_on_submit=False):
       "Left Site",
   ])
 
+  st.markdown("---")
+  st.write("**Refusals & Advice Checkboxes**")
+  refused_fa = st.checkbox("Casualty Refused First Aid")
+  advised_hospital = st.checkbox("Casualty Advised to attend Hospital")
+
   fa_name = st.text_input("First Aider Name *")
   fa_dept = st.text_input("First Aider Department *")
 
   st.markdown("---")
-  st.write("✍️ **Injured Person Signature**")
+  st.write("✍️ **Injured Person (or Parent/Guardian) Signature**")
   canvas_injured = st_canvas(
       stroke_width=2,
       stroke_color="#000",
       background_color="#F0F2F6",
-      height=100,
-      width=320,
+      height=120,
+      width=340,
       drawing_mode="freedraw",
       key="sig_inj",
-  )
-
-  st.write("✍️ **Casualty REFUSED First Aid Signature**")
-  canvas_refused = st_canvas(
-      stroke_width=2,
-      stroke_color="#000",
-      background_color="#F0F2F6",
-      height=100,
-      width=320,
-      drawing_mode="freedraw",
-      key="sig_ref",
-  )
-
-  st.write("✍️ **Casualty ADVISED to go to Hospital Signature**")
-  canvas_hospital = st_canvas(
-      stroke_width=2,
-      stroke_color="#000",
-      background_color="#F0F2F6",
-      height=100,
-      width=320,
-      drawing_mode="freedraw",
-      key="sig_hosp",
   )
 
   submit_button = st.form_submit_button(
@@ -344,7 +326,7 @@ if submit_button:
           img_b = io.BytesIO()
           img.save(img_b, format="PNG")
           img_b.seek(0)
-          return RLImage(img_b, width=120, height=35)
+          return RLImage(img_b, width=140, height=40)
         return Paragraph("<i>None</i>", body_style)
 
       # Block 4
@@ -355,23 +337,23 @@ if submit_button:
               Paragraph(disposition, body_style),
           ],
           [
+              Paragraph("<b>Refused First Aid:</b>", body_style),
+              Paragraph("YES" if refused_fa else "NO", body_style),
+          ],
+          [
+              Paragraph("<b>Advised Hospital:</b>", body_style),
+              Paragraph("YES" if advised_hospital else "NO", body_style),
+          ],
+          [
               Paragraph("<b>First Aider:</b>", body_style),
               Paragraph(f"{fa_name} ({fa_dept})", body_style),
           ],
           [
-              Paragraph("<b>Casualty Signature:</b>", body_style),
+              Paragraph("<b>Casualty / Guardian Signature:</b>", body_style),
               get_sig_img(canvas_injured),
           ],
-          [
-              Paragraph("<b>Treatment Refused Sig:</b>", body_style),
-              get_sig_img(canvas_refused),
-          ],
-          [
-              Paragraph("<b>Hospital Advised Sig:</b>", body_style),
-              get_sig_img(canvas_hospital),
-          ],
       ]
-      t4 = Table(sign_data, colWidths=[130, 400])
+      t4 = Table(sign_data, colWidths=[150, 380])
       t4.setStyle(
           TableStyle([
               ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
