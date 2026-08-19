@@ -105,7 +105,7 @@ with st.form("first_aid_form", clear_on_submit=False):
         placeholder="Detail visible signs (swelling, cuts) and symptoms reported (pain level, numbness).",
     )
     treatment = st.text_area(
-        "Treatment or Advice Given *",
+        "Treatment Given or Advice Provided *",
         placeholder="Detail all actions taken, equipment used (e.g., sling), and specific advice given.",
     )
 
