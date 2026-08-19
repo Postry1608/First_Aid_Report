@@ -15,7 +15,12 @@ from reportlab.platypus import (
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 
-st.set_page_config(page_title="First Aid Reporter", layout="centered")
+# --- DEFINE PAGE CONFIG AT THE VERY TOP (MUST BE FIRST ST COMMAND) ---
+st.set_page_config(
+    page_title="First Aid Report Tool",  # <--- Change this for each site
+    page_icon="🚀",  # <--- Optional: change the emoji icon
+    layout="centered",
+)
 
 # --- HIDE "PRESS ENTER TO SUBMIT" & STEPPER (+/-) BUTTONS VIA CSS ---
 st.markdown(
@@ -79,7 +84,7 @@ with st.form("first_aid_form", clear_on_submit=False):
 
     icard_type = st.radio(
         "Ticket Type",
-        ["Wristband", "iCard"],
+        ["No iCard/Wristband", "Wristband", "iCard"],
         horizontal=True,
     )
     icard_num = st.text_input("Wristband / iCard Number (Type N/A if none) *")
@@ -91,8 +96,8 @@ with st.form("first_aid_form", clear_on_submit=False):
 
     st.subheader("2. Incident Location")
     loc_detail = st.text_input(
-        "Incident Location (e.g., Ride, Off Site,"
-        "Market Unit) *"
+        "Incident Location (e.g., Millennium Rollercoaster queue, Ingoldmells"
+        " Market, Pier Arcade) *"
     )
 
     st.subheader("3. Incident & Clinical Details")
@@ -105,7 +110,7 @@ with st.form("first_aid_form", clear_on_submit=False):
         placeholder="Detail visible signs (swelling, cuts) and symptoms reported (pain level, numbness).",
     )
     treatment = st.text_area(
-        "Treatment Given or Advice Provided *",
+        "Treatment or Advice Given *",
         placeholder="Detail all actions taken, equipment used (e.g., sling), and specific advice given.",
     )
 
@@ -216,7 +221,7 @@ if submit_button:
                 "BoldBody", parent=body_style, fontName="Helvetica-Bold"
             )
 
-            # --- GUARANTEED LOGO INTEGRATION IN PDF HEADER ---
+            # --- LOGO PRINTED IN PDF HEADER ---
             if os.path.exists("logo.png"):
                 logo_img = RLImage("logo.png", width=120, height=45)
                 header_data = [[
