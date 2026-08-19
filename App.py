@@ -79,7 +79,7 @@ with st.form("first_aid_form", clear_on_submit=False):
 
     icard_type = st.radio(
         "Ticket Type",
-        ["No iCard/Wristband", "Wristband", "iCard"],
+        ["Wristband", "iCard"],
         horizontal=True,
     )
     icard_num = st.text_input("Wristband / iCard Number (Type N/A if none) *")
@@ -91,8 +91,8 @@ with st.form("first_aid_form", clear_on_submit=False):
 
     st.subheader("2. Incident Location")
     loc_detail = st.text_input(
-        "Incident Location (e.g., Millennium Rollercoaster queue, Ingoldmells"
-        " Market, Pier Arcade) *"
+        "Incident Location (e.g., Ride, Off Site,"
+        "Market Unit) *"
     )
 
     st.subheader("3. Incident & Clinical Details")
